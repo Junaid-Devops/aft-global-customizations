@@ -8,7 +8,7 @@ This repository is part of AFT lab. For detailed walkthrough, please check the l
 
 There are four repository, to help you get started:
 - [aft-sample-account-provisioning-customizations](https://github.com/aws-samples/aft-sample-account-provisioning-customizations)
-- [aft-sample-account-customizations](https://github.com/aws-samples/aft-sample-account-provisioning-customizations)
+- [aft-sample-account-customizations](https://github.com/aws-samples/aft-sample-account-customizations)
 - [aft-sample-global-customizations](https://github.com/aws-samples/aft-sample-global-customizations)
 - [aft-sample-account-request](https://github.com/aws-samples/aft-sample-account-request)
 
