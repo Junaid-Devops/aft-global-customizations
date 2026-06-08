@@ -34,7 +34,7 @@ def get_account_name_from_ddb(account_id, region_name="us-east-1"):
     to safely read the 'aft-request-metadata' tracking table.
     """
     # Hardcoded AFT Management Account ID from your verified architecture policy
-    AFT_MGMT_ACCOUNT = "578673726382" 
+    AFT_MGMT_ACCOUNT = "678780124859" 
     
     sts_client = boto3.client('sts', region_name=region_name)
     role_arn = f"arn:aws:iam::{AFT_MGMT_ACCOUNT}:role/AWSAFTExecution"
