@@ -30,17 +30,17 @@ def get_secret_from_aws(secret_name, region_name="us-east-1"):
 
 def get_account_name_from_ddb(account_id, region_name="us-east-1"):
     """
-    Temporarily assumes the AWSAFTExecution role back in the AFT Management Account
+    Temporarily assumes the AWSAFTAdmin role back in the AFT Management Account
     to safely read the 'aft-request-metadata' tracking table.
     """
     # Hardcoded AFT Management Account ID from your verified architecture policy
     AFT_MGMT_ACCOUNT = "678780124859" 
     
     sts_client = boto3.client('sts', region_name=region_name)
-    role_arn = f"arn:aws:iam::{AFT_MGMT_ACCOUNT}:role/AWSAFTExecution"
+    role_arn = f"arn:aws:iam::{AFT_MGMT_ACCOUNT}:role/AWSAFTAdmin"
     
     try:
-        print(f"🔗 Assuming deployment role in AFT Management Account to look up inventory...")
+        print(f"🔗 Assuming AWSAFTAdmin role in AFT Management Account to look up inventory...")
         assumed_role = sts_client.assume_role(
             RoleArn=role_arn,
             RoleSessionName="AFTApiHelperMetadataLookup"
