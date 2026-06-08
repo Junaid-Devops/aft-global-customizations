@@ -6,15 +6,14 @@ from botocore.exceptions import ClientError
 
 
 def get_secret_from_aws(secret_name, region_name="us-east-1"):
-    """Fetches the Netskope API token securely from the local child account Secrets Manager."""
-    # This automatically uses the active 'aft-target' profile context
+    """Fetches the central Netskope API token from the AFT Management Account."""
     session = boto3.session.Session()
     client = session.client(service_name="secretsmanager", region_name=region_name)
 
     try:
         get_secret_value_response = client.get_secret_value(SecretId=secret_name)
     except ClientError as e:
-        print(f"❌ Error retrieving secret from local account: {e}")
+        print(f"❌ Error retrieving secret from AFT Management Account: {e}")
         raise e
 
     if "SecretString" in get_secret_value_response:
@@ -29,35 +28,13 @@ def get_secret_from_aws(secret_name, region_name="us-east-1"):
 
 
 def get_account_name_from_ddb(account_id, region_name="us-east-1"):
-    """
-    Temporarily assumes the AWSAFTAdmin role back in the AFT Management Account
-    to safely read the 'aft-request-metadata' tracking table.
-    """
-    # Hardcoded AFT Management Account ID from your verified architecture policy
-    AFT_MGMT_ACCOUNT = "678780124859" 
-    
-    sts_client = boto3.client('sts', region_name=region_name)
-    role_arn = f"arn:aws:iam::{AFT_MGMT_ACCOUNT}:role/AWSAFTAdmin"
-    
+    """Queries the local AFT metadata table directly from the Management session."""
+    dynamodb = boto3.client('dynamodb', region_name=region_name)
+    table_name = "aft-request-metadata"
+
     try:
-        print(f"🔗 Assuming AWSAFTAdmin role in AFT Management Account to look up inventory...")
-        assumed_role = sts_client.assume_role(
-            RoleArn=role_arn,
-            RoleSessionName="AFTApiHelperMetadataLookup"
-        )
-        creds = assumed_role['Credentials']
-        
-        # Build a dedicated management session
-        mgmt_session = boto3.client(
-            'dynamodb',
-            aws_access_key_id=creds['AccessKeyId'],
-            aws_secret_access_key=creds['SecretAccessKey'],
-            aws_session_token=creds['SessionToken'],
-            region_name=region_name
-        )
-        
-        table_name = "aft-request-metadata"
-        response = mgmt_session.get_item(
+        print(f"🔍 Querying table '{table_name}' for Account ID: {account_id}...")
+        response = dynamodb.get_item(
             TableName=table_name,
             Key={'id': {'S': str(account_id)}}
         )
@@ -72,7 +49,7 @@ def get_account_name_from_ddb(account_id, region_name="us-east-1"):
         return "Unknown-AFT-Account"
 
     except Exception as e:
-        print(f"❌ Cross-Account Database Query Failure: {e}")
+        print(f"❌ Database Query Failure: {e}")
         return "Unknown-AFT-Account"
 
 
@@ -91,6 +68,8 @@ def add_app_instances(tenant_url, token, instances_payload):
         )
         response.raise_for_status()
         print(f"✅ Netskope API Status Code: {response.status_code}")
+        print("Response Body:")
+        print(json.dumps(response.json(), indent=4))
         return response.json()
     except Exception as err:
         print(f"❌ Netskope API Connection Error: {err}")
@@ -100,8 +79,6 @@ if __name__ == "__main__":
     TENANT_URL = "agero.goskope.com"
     AWS_SECRET_NAME = "my-netskope-secret"  
     AWS_REGION = "us-east-1"                 
-    
-    # Resolves path correctly relative to the api_helpers folder structure
     JSON_FILE_PATH = os.path.join(os.path.dirname(__file__), "instances.json")
 
     print("🚀 Booting AFT Native Pipeline API Helper Wrapper...")
@@ -113,7 +90,7 @@ if __name__ == "__main__":
         print("❌ Fatal Error: VENDED_ACCOUNT_ID environment variable is missing.")
         exit(1)
 
-    # 2. Resolve Account Name dynamically via cross-account assume
+    # 2. Resolve Account Name dynamically using local Management session
     target_account_name = get_account_name_from_ddb(target_account_id, AWS_REGION)
     print(f"🎯 Target Profile Scoped -> ID: {target_account_id} | Name: {target_account_name}")
 
@@ -126,13 +103,17 @@ if __name__ == "__main__":
         exit(1)
 
     # 4. In-Memory Replace
+    modified_count = 0
     for instance in payload_data.get("instances", []):
         if instance.get("instance_id") == "replacewithaccountid":
             instance["instance_id"] = target_account_id
+            modified_count += 1
         if instance.get("instance_name") == "replacewithaccountname":
             instance["instance_name"] = target_account_name
 
-    # 5. Extract Secret Token and Enroll
+    print(f"📋 Tailored {modified_count} instance profiles for submission.")
+
+    # 5. Extract Secret Token from local account and Enroll
     api_token = get_secret_from_aws(AWS_SECRET_NAME, AWS_REGION)
     if api_token:
         add_app_instances(TENANT_URL, api_token, payload_data)
