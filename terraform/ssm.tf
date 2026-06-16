@@ -1,9 +1,15 @@
 # ====================================================================
-# 1. MANAGEMENT PROVIDER ONLY (The default one is already in aft-providers.tf)
+# 1. MANAGEMENT PROVIDER WITH EXPLICIT ROLE ASSUMPTION
 # ====================================================================
 provider "aws" {
   alias  = "management"
   region = "us-east-1" 
+  
+  # Crucial: Force the management provider to assume the designated AFT Admin role
+  # if your ssm.tf is handled by Jinja, use: role_arn = "{{ aft_admin_role_arn }}"
+  assume_role {
+    role_arn = "arn:aws:iam::678780124859:role/AWSAFTAdmin" 
+  }
 }
 
 # ====================================================================
@@ -11,7 +17,7 @@ provider "aws" {
 # ====================================================================
 # Reaches into the Management Account's DynamoDB Table
 data "aws_dynamodb_table_item" "aft_metadata" {
-  provider   = aws.management # <-- Uses the management alias above
+  provider   = aws.management 
   table_name = "aft-request-metadata"
   
   key = jsonencode({
@@ -33,9 +39,6 @@ locals {
 # ====================================================================
 # 4. TARGET ACCOUNT SSM PARAMETERS
 # ====================================================================
-# Both of these drop down to the default provider automatically,
-# landing safely inside the Target Vended Account.
-
 resource "aws_ssm_parameter" "AWSAccountID" {
   name      = "/aft/AWSAccountID"
   type      = "String"
@@ -48,11 +51,4 @@ resource "aws_ssm_parameter" "AWSAccountName" {
   type      = "String"
   value     = local.account_name
   overwrite = true
-}
-
-
-# This will print the active IAM Role ARN in your TFC/CodeBuild logs
-output "current_terraform_iam_identity" {
-  value       = data.aws_caller_identity.current.arn
-  description = "The exact IAM Role or User executing this Terraform plan"
 }
