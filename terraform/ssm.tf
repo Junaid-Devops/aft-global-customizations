@@ -1,16 +1,21 @@
 # ====================================================================
-# 1. MANAGEMENT PROVIDER (Uses the default, uninhibited AFT session)
+# 1. MANAGEMENT PROVIDER (Assuming the active Execution Role)
 # ====================================================================
 provider "aws" {
   alias  = "management"
   region = "us-east-1" 
-  # NO assume_role block here! This forces it to use the baseline pipeline credentials.
+  
+  # Crucial: Jump from the Admin session to the explicit Execution role 
+  # inside the management account to bypass the KMS key block
+  assume_role {
+    role_arn = "arn:aws:iam::678780124859:role/AWSAFTExecution"
+  }
 }
 
 # ====================================================================
 # 2. DATA LOOKUPS
 # ====================================================================
-# Reaches into the Management Account's DynamoDB Table natively
+# Reaches into the Management Account's DynamoDB Table
 data "aws_dynamodb_table_item" "aft_metadata" {
   provider   = aws.management 
   table_name = "aft-request-metadata"
@@ -34,8 +39,9 @@ locals {
 # ====================================================================
 # 4. TARGET ACCOUNT SSM PARAMETERS
 # ====================================================================
-# These drop down to the default provider automatically, 
-# creating them cleanly inside the Target Vended Account.
+# Note: Renamed the resource block to "AWSAccountID" so it perfectly 
+# matches the resource name below, preventing Terraform from trying 
+# to destroy and recreate it!
 
 resource "aws_ssm_parameter" "AWSAccountID" {
   name      = "/aft/AWSAccountID"
