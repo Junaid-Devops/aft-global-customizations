@@ -1,22 +1,17 @@
-# Default Provider: This acts inside the TARGET vended account
-provider "aws" {
-  region = "us-east-1"
-  # (AFT automatically handles the assume_role configuration here behind the scenes)
-}
-
-# Secondary Provider: Explicitly targets the MANAGEMENT account
-# We use an alias so we can reference it when needed
+# ====================================================================
+# 1. MANAGEMENT PROVIDER ONLY (The default one is already in aft-providers.tf)
+# ====================================================================
 provider "aws" {
   alias  = "management"
   region = "us-east-1" 
-  # If TFC runs with management credentials initially, it uses them here directly
 }
 
 # ====================================================================
-# THE DATA LOOKUP (Reaches into Management Account)
+# 2. DATA LOOKUPS
 # ====================================================================
+# Reaches into the Management Account's DynamoDB Table
 data "aws_dynamodb_table_item" "aft_metadata" {
-  provider   = aws.management # <-- CRITICAL: Tells TF to look in the Management Account!
+  provider   = aws.management # <-- Uses the management alias above
   table_name = "aft-request-metadata"
   
   key = jsonencode({
@@ -24,18 +19,24 @@ data "aws_dynamodb_table_item" "aft_metadata" {
   })
 }
 
-# ====================================================================
-# THE SSM PARAMETERS (Deploys into the Target Vended Account)
-# ====================================================================
-data "aws_caller_identity" "current" {} # Uses default provider (Target Account)
+# Automatically uses the default provider from aft-providers.tf (Target Account)
+data "aws_caller_identity" "current" {} 
 
+# ====================================================================
+# 3. DYNAMIC DATA PARSING
+# ====================================================================
 locals {
   parsed_item  = jsondecode(data.aws_dynamodb_table_item.aft_metadata.item)
   account_name = local.parsed_item.account_name.S
 }
 
+# ====================================================================
+# 4. TARGET ACCOUNT SSM PARAMETERS
+# ====================================================================
+# Both of these drop down to the default provider automatically,
+# landing safely inside the Target Vended Account.
+
 resource "aws_ssm_parameter" "AWSAccountID" {
-  # No provider specified = Uses default provider (Target Account)
   name      = "/aft/AWSAccountID"
   type      = "String"
   value     = data.aws_caller_identity.current.account_id
@@ -43,7 +44,6 @@ resource "aws_ssm_parameter" "AWSAccountID" {
 }
 
 resource "aws_ssm_parameter" "AWSAccountName" {
-  # No provider specified = Uses default provider (Target Account)
   name      = "/aft/AWSAccountName"
   type      = "String"
   value     = local.account_name
