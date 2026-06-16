@@ -1,21 +1,16 @@
 # ====================================================================
-# 1. MANAGEMENT PROVIDER WITH EXPLICIT ROLE ASSUMPTION
+# 1. MANAGEMENT PROVIDER (Uses the default, uninhibited AFT session)
 # ====================================================================
 provider "aws" {
   alias  = "management"
   region = "us-east-1" 
-  
-  # Crucial: Force the management provider to assume the designated AFT Admin role
-  # if your ssm.tf is handled by Jinja, use: role_arn = "{{ aft_admin_role_arn }}"
-  assume_role {
-    role_arn = "arn:aws:iam::678780124859:role/AWSAFTAdmin" 
-  }
+  # NO assume_role block here! This forces it to use the baseline pipeline credentials.
 }
 
 # ====================================================================
 # 2. DATA LOOKUPS
 # ====================================================================
-# Reaches into the Management Account's DynamoDB Table
+# Reaches into the Management Account's DynamoDB Table natively
 data "aws_dynamodb_table_item" "aft_metadata" {
   provider   = aws.management 
   table_name = "aft-request-metadata"
@@ -25,7 +20,7 @@ data "aws_dynamodb_table_item" "aft_metadata" {
   })
 }
 
-# Automatically uses the default provider from aft-providers.tf (Target Account)
+# Automatically uses the default provider from AFT (Target Vended Account)
 data "aws_caller_identity" "current" {} 
 
 # ====================================================================
@@ -39,6 +34,9 @@ locals {
 # ====================================================================
 # 4. TARGET ACCOUNT SSM PARAMETERS
 # ====================================================================
+# These drop down to the default provider automatically, 
+# creating them cleanly inside the Target Vended Account.
+
 resource "aws_ssm_parameter" "AWSAccountID" {
   name      = "/aft/AWSAccountID"
   type      = "String"
