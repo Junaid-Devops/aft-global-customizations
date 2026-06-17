@@ -47,7 +47,7 @@ module "cloud_native" {
   aws_regions      = ["us-west-2", "us-east-1", "us-east-2"]
 
   rsc_aws_features = [
-    { name = "CLOUD_NATIVE_ARCHIVAL",            permission_groups = [] },
+   
     { name = "CLOUD_NATIVE_PROTECTION",          permission_groups = [] },
     { name = "CLOUD_NATIVE_S3_PROTECTION",       permission_groups = [] },
     { name = "CLOUD_NATIVE_DYNAMODB_PROTECTION", permission_groups = [] },
