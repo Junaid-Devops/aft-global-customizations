@@ -16,17 +16,7 @@ terraform {
 }
 
 # ====================================================================
-# 2. MANAGEMENT PROVIDER (For Secrets Manager lookup)
-# ====================================================================
-provider "aws" {
-  alias  = "management"
-  region = "us-east-1"
-  assume_role {
-    role_arn = "arn:aws:iam::678780124859:role/AWSAFTExecution"
-  }
-}
-
-# ====================================================================
+ ====================================================================
 # 3. POLARIS CONFIGURATION & MODULE
 # ====================================================================
 data "aws_ssm_parameter" "target_id" {
