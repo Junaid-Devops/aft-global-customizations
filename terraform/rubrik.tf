@@ -49,8 +49,29 @@ module "cloud_native" {
   rsc_aws_features = [
    
     { name = "CLOUD_NATIVE_PROTECTION",          permission_groups = [] },
+    { name = "CLOUD_DISCOVERY",          permission_groups = [] },
     { name = "CLOUD_NATIVE_S3_PROTECTION",       permission_groups = [] },
     { name = "CLOUD_NATIVE_DYNAMODB_PROTECTION", permission_groups = [] },
     { name = "RDS_PROTECTION",                   permission_groups = [] }
   ]
+}
+
+# ====================================================================
+# 1. LOOK UP THE SHARED SERVICES EXACOMPUTE HOST ACCOUNT
+# ====================================================================
+# This pulls the internal Rubrik identifier for your central host account.
+data "polaris_aws_account" "exocompute_host" {
+  # This must match the exact name of your central host account inside the Rubrik console
+  name = "AgeroSharedServices" 
+}
+
+# ====================================================================
+# 2. CREATE THE APPLICATION MAPPING (As seen in the UI Screenshot)
+# ====================================================================
+resource "polaris_aws_exocompute" "map_exocompute" {
+  # The dynamically onboarded target account ID (e.g., AgeroSparkProd)
+  account_id      = module.cloud_native.id
+
+  # The central shared services account ID that holds the compute resources
+  host_account_id = data.polaris_aws_account.exocompute_host.id
 }
