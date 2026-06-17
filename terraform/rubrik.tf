@@ -57,21 +57,33 @@ module "cloud_native" {
 }
 
 # ====================================================================
-# 1. LOOK UP THE SHARED SERVICES EXACOMPUTE HOST ACCOUNT
+# 1. LOOK UP THE CENTRAL SHARED SERVICES HOST ID
 # ====================================================================
-# This pulls the internal Rubrik identifier for your central host account.
 data "polaris_aws_account" "exocompute_host" {
-  # This must match the exact name of your central host account inside the Rubrik console
+  # Looks up the central host account inside the Rubrik console
   name = "AgeroSharedServices" 
 }
 
 # ====================================================================
-# 2. CREATE THE APPLICATION MAPPING (As seen in the UI Screenshot)
+# 2. LOOK UP THE NEWLY ENROLLED ACCOUNT'S INTERNAL RUBRIK UUID
+# ====================================================================
+data "polaris_aws_account" "new_vended_account" {
+  # This dynamically looks up the account name we just enrolled 
+  # (e.g., testaft4) so we can grab its Rubrik UUID.
+  name = data.aws_ssm_parameter.target_name.value
+
+  # This depends_on forces Terraform to wait until the module completely 
+  # finishes onboarding the account before trying to look it up!
+  depends_on = [module.cloud_native]
+}
+
+# ====================================================================
+# 3. CREATE THE APPLICATION MAPPING (Using the valid UUIDs)
 # ====================================================================
 resource "polaris_aws_exocompute" "map_exocompute" {
-  # Points directly to the parameter value we looked up at the top of the file
-  account_id      = data.aws_ssm_parameter.target_id.value
+  # Passes the clean Rubrik UUID instead of the 12-digit AWS account number
+  account_id      = data.polaris_aws_account.new_vended_account.id
 
-  # The central shared services account ID that holds the compute resources
+  # Passes the central shared services Rubrik UUID
   host_account_id = data.polaris_aws_account.exocompute_host.id
 }
