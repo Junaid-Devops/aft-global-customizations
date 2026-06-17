@@ -69,8 +69,8 @@ data "polaris_aws_account" "exocompute_host" {
 # 2. CREATE THE APPLICATION MAPPING (As seen in the UI Screenshot)
 # ====================================================================
 resource "polaris_aws_exocompute" "map_exocompute" {
-  # The dynamically onboarded target account ID (e.g., AgeroSparkProd)
-  account_id      = module.cloud_native.id
+  # Points directly to the parameter value we looked up at the top of the file
+  account_id      = data.aws_ssm_parameter.target_id.value
 
   # The central shared services account ID that holds the compute resources
   host_account_id = data.polaris_aws_account.exocompute_host.id
