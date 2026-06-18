@@ -19,10 +19,13 @@ terraform {
 # ====================================================================
 data "aws_ssm_parameter" "target_id" {
   name = "/aft/AWSAccountID"
+  depends_on = [aws_ssm_parameter.AWSAccountID]
 }
 
 data "aws_ssm_parameter" "target_name" {
   name = "/aft/AWSAccountName"
+  depends_on = [aws_ssm_parameter.AWSAccountName]
+  
 }
 
 data "aws_secretsmanager_secret" "polaris_creds" {
