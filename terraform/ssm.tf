@@ -30,8 +30,9 @@ data "aws_caller_identity" "current" {}
 # 3. DYNAMIC DATA PARSING
 # ====================================================================
 locals {
-  parsed_item  = jsondecode(data.aws_dynamodb_table_item.aft_metadata.item)
-  account_name = local.parsed_item.account_name.S
+  parsed_item   = jsondecode(data.aws_dynamodb_table_item.aft_metadata.item)
+  account_name  = local.parsed_item.account_name.S
+  abc_division  = local.parsed_item.account_level_tags["team"].S
 }
 
 # ====================================================================
@@ -50,4 +51,10 @@ resource "aws_ssm_parameter" "AWSAccountName" {
   name  = "/aft/AWSAccountName"
   type  = "String"
   value = local.account_name
+}
+
+resource "aws_ssm_parameter" "ABCDivision" {
+  name  = "/aft/team"
+  type  = "String"
+  value = local.team
 }
