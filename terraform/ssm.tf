@@ -56,5 +56,5 @@ resource "aws_ssm_parameter" "AWSAccountName" {
 resource "aws_ssm_parameter" "ABCDivision" {
   name  = "/aft/team"
   type  = "String"
-  value = local.team
+  value = local.abc_division
 }
