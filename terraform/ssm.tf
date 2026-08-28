@@ -32,7 +32,7 @@ data "aws_caller_identity" "current" {}
 locals {
   parsed_item   = jsondecode(data.aws_dynamodb_table_item.aft_metadata.item)
   account_name  = local.parsed_item.account_name.S
-  abc_division  = local.parsed_item.account_level_tags["ABC:Division"].S
+  abc_division  = local.parsed_item.account_level_tags.M["ABC:Division"].S
 }
 
 # ====================================================================
